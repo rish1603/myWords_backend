@@ -7,6 +7,7 @@ var session = require('express-session');
 var mongoose = require('mongoose');
 var passport = require('passport');
 var User = require('./models/user')
+var constants = require('./constants');
 
 // Conenct to DB
 mongoose.connect('mongodb://localhost/myWords');
@@ -37,7 +38,8 @@ app.post('/register', function(req, res){
     var newUser = new User({
       email: req.body.email,
       username: req.body.username,
-      password: req.body.password
+      password: req.body.password,
+      words: req.body.words
     });
 
     User.createUser(newUser, function(err, user){
@@ -97,5 +99,11 @@ app.get('/logout', function(req, res){
   req.logout();
   res.send(null)
 });
+
+app.get('/:userName/en/:word', function(req, res) {
+    res.send(req.params)
+})
+
+console.log(constants.MY_CONSTANT)
 
 app.listen(3000, () => console.log('App listening on port 3000!'))
