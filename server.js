@@ -1,11 +1,16 @@
+const jwtSecret = require('./config/jwtConfig')
 const express = require('express');
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8080;
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
+const cors = require('cors')
 const mongoose = require('mongoose');
-const passport = require('passport');
+const passport = require('passport'),
+  LocalStrategy = require('passport-local').Strategy,
+  JWTstrategy = require('passport-jwt').Strategy,
+  ExtractJWT = require('passport-jwt').ExtractJwt;
 const User = require('./models/user');
 const request = require('request');
 const constants = require('./constants');
@@ -53,8 +58,9 @@ app.post('/register', function (req, res) {
   }
 });
 
-var LocalStrategy = require('passport-local').Strategy;
-passport.use(new LocalStrategy(
+// Used to verify log in details
+passport.use('login',
+  new LocalStrategy(
   function (username, password, done) {
     User.getUserByUsername(username, function (err, user) {
       if (err) throw err;
@@ -73,6 +79,36 @@ passport.use(new LocalStrategy(
   }
 ));
 
+const opts = {
+  jwtFromRequest: ExtractJWT.fromAuthHeaderWithScheme('JWT'),
+  secretOrKey: jwtSecret.secret,
+};
+
+// Authenticate JWT token
+passport.use(
+  'jwt',
+  new JWTstrategy(opts, (jwt_payload, done) => {
+    try {
+      User.findOne({
+        where: {
+          username: jwt_payload.id,
+        },
+      }).then(user => {
+        if (user) {
+          console.log('user found in db in passport');
+          // note the return removed with passport JWT - add this return for passport local
+          done(null, user);
+        } else {
+          console.log('user not found in db');
+          done(null, false);
+        }
+      });
+    } catch (err) {
+      done(err);
+    }
+  }),
+);
+
 passport.serializeUser(function (user, done) {
   done(null, user.id);
 });
@@ -83,11 +119,15 @@ passport.deserializeUser(function (id, done) {
   });
 });
 
+// Enable CORS
+app.use(cors())
+
 // Endpoint to login
 app.post('/login',
-  passport.authenticate('local'),
+  passport.authenticate('login'),
   function (req, res) {
-    res.send(req.user);
+    console.log("login attempt received...")
+        res.send(req.user);
   }
 );
 
@@ -167,7 +207,6 @@ function queryOxfordAPI(word) {
 
   then (later) need to create a 'wordBank' database which includes example sentences and definitions
   */
-
 }
 
-app.listen(3000, () => console.log('App listening on port 3000!'))
+app.listen(port, () => console.log('App listening on port:' + port))
