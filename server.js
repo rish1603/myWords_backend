@@ -13,6 +13,8 @@ const passport = require('passport'),
   ExtractJWT = require('passport-jwt').ExtractJwt;
 const User = require('./models/user');
 const request = require('request');
+const jwt = require('jsonwebtoken')
+const checkAuth = require('./check-auth')
 const constants = require('./constants');
 
 // Conenct to DB
@@ -61,23 +63,23 @@ app.post('/register', function (req, res) {
 // Used to verify log in details
 passport.use('login',
   new LocalStrategy(
-  function (username, password, done) {
-    User.getUserByUsername(username, function (err, user) {
-      if (err) throw err;
-      if (!user) {
-        return done(null, false, { message: 'Unknown User' });
-      }
-      User.comparePassword(password, user.password, function (err, isMatch) {
+    function (username, password, done) {
+      User.getUserByUsername(username, function (err, user) {
         if (err) throw err;
-        if (isMatch) {
-          return done(null, user);
-        } else {
-          return done(null, false, { message: 'Invalid password' });
+        if (!user) {
+          return done(null, false, { message: 'Unknown User' });
         }
+        User.comparePassword(password, user.password, function (err, isMatch) {
+          if (err) throw err;
+          if (isMatch) {
+            return done(null, user);
+          } else {
+            return done(null, false, { message: 'Invalid password' });
+          }
+        });
       });
-    });
-  }
-));
+    }
+  ));
 
 const opts = {
   jwtFromRequest: ExtractJWT.fromAuthHeaderWithScheme('JWT'),
@@ -126,8 +128,22 @@ app.use(cors())
 app.post('/login',
   passport.authenticate('login'),
   function (req, res) {
-    console.log("login attempt received...")
-        res.send(req.user);
+    // res.send(req.user);
+    if (req.user) {
+      const token = jwt.sign(
+        {
+          username: req.user.username,
+        },
+        jwtSecret.secret,
+        {
+          expiresIn: "1h"
+        }
+      );
+      return res.status(200).json({
+        message: "Auth successful",
+        token: token
+      });
+    }
   }
 );
 
@@ -143,8 +159,10 @@ app.get('/logout', function (req, res) {
 });
 
 // Get word info from Oxford API and add to list of words
-app.get('/:userName/:word', function (req, res) {
-  User.getUserByUsername(req.params.userName, function (err, user) {
+app.get('/:userName/:word', checkAuth, function (req, res) {
+  const userName = req.params.userName
+  const newWord = req.params.word
+  User.getUserByUsername(userName, function (err, user) {
     if (err) {
       console.log(err)
       res.status(500).send()
@@ -154,19 +172,22 @@ app.get('/:userName/:word', function (req, res) {
         res.status(404).send()
       }
       else {
-        if (req.params.userName) {
-          queryOxfordAPI(req.params.word)
-          var newWord = {
-            word: req.params.word,
+        if (userName) {
+          queryOxfordAPI(newWord)
+          var newWordObject = {
+            word: newWord,
             definition: 'I am the second word'
           };
           User.findOneAndUpdate(
-            { username: req.params.userName },
-            { $push: { words: newWord } },
+            { username: userName },
+            { $push: { words: newWordObject } },
             function (error, success) {
               if (error) {
+                console.log("i shouldnt get printed ever")
                 res.status(500).send(error)
               } else {
+                // console.log(success)
+                console.log("printed axax")
                 res.status(200).send(success)
               }
             }
