@@ -8,15 +8,14 @@ const session = require('express-session');
 const cors = require('cors')
 const mongoose = require('mongoose');
 const passport = require('passport'),
-  LocalStrategy = require('passport-local').Strategy,
-  JWTstrategy = require('passport-jwt').Strategy,
-  ExtractJWT = require('passport-jwt').ExtractJwt;
+  LocalStrategy = require('passport-local').Strategy
 const User = require('./models/user');
 const Word = require('./models/wordBank');
-const request = require('request');
+var request = require('request-promise');
 const jwt = require('jsonwebtoken')
 const checkAuth = require('./check-auth')
 const constants = require('./constants');
+const bluebird = require("bluebird");
 
 // Conenct to DB
 mongoose.connect('mongodb://localhost/myWords');
@@ -154,79 +153,49 @@ const options = {
 };
 
 // Get word info from Oxford API and add to list of words
-app.get('/:userName/:word', function (req, res) {
-  const userName = req.params.userName
-  const newWord = req.params.word
+app.get('/:userName/:word', checkAuth, function (req, res) {
 
-    User.getUserByUsername(userName, function (err, user) {
-      if (err) {
-        console.log(err)
-        return res.status(500).send("error occcured")
-      }
-      else {
-        if (!user) {
-          return res.status(404).send("user not found")
-        }
-        else {
-          if (userName) {
+  var word = {
+    word: req.params.word,
+    definitions: [String],
+    sentences: [String],
+    lexicalCategory: String,
+    mp3: mongoose.SchemaTypes.Url,
+  }
 
-            // resetting and rebuilding endpoint
-            options.url = constants.BASE_URL
-            options.url = options.url + newWord
+  // build main request parameters
+  options.url = constants.BASE_URL
+  options.url += req.params.word
+  const mainRequest = request(options)
 
-            request(options, function (err, res, body) {
-              if (err) {
-                return res.status(500).send(error)
-              }
-              else {
-                try {
-                  let json = JSON.parse(body);
-                  const word = new Word( {
-                    word: newWord,
-                    definitions: json.results[0].lexicalEntries[0].entries[0].senses[0].definitions,
-                    lexicalCategory: json.results[0].lexicalEntries[x].lexicalCategory,
-                    mp3: json.results[0].lexicalEntries[0].pronunciations[0].audioFile
-                  })
-                  console.log(json.results[0].lexicalEntries[0].entries[0].senses[0].definitions)
-                } catch (err) {
-                  console.log(err)
-                }
-              }
-            });
+  // build request parameters for separate request to get sentences
+  const sentencesRequestOptions = options
+  sentencesRequestOptions.url += '/sentences'
+  const  sentencesRequest = request(sentencesRequestOptions)
 
-            wordExample.save(function (err, word) {
-              if (err) return handleError(err);
+  bluebird.all([mainRequest, sentencesRequest])
+  .spread(function(mainResponse, sentencesResponse) {
 
-              User.findOneAndUpdate(
-                { username: userName },
-                { $push: { words: word.id } },
-                function (error, success) {
-                  if (error) {
-                    res.status(500).send(error)
-                  } else {
-                    return res.status(200).send(success)
-                  }
-                }
-              );
+    //get main data
+    const json = JSON.parse(mainResponse)
+    word.definitions = json.results[0].lexicalEntries[0].entries[0].senses[0].definitions
+    word.lexicalCategory = json.results[0].lexicalEntries[0].lexicalCategory
+    word.mp3 = json.results[0].lexicalEntries[0].pronunciations[0].audioFile
 
-            });
+    // get sentence data 
+    const sentenceJson = JSON.parse(sentencesResponse)
+    for (x in sentenceJson.results[0].lexicalEntries[0].sentences) {
+      word.sentences.push(sentenceJson.results[0].lexicalEntries[0].sentences[x].text)
+    }
+    return res.status(201).send("word added")
+  })
+  .catch(function(err) {
+    console.log(err)
+  })
 
-          }
-        }
-      }
-    });
+  return res.status(200)
 })
 
-
-// // Make Request to Oxford Dictionary API
-
-  /* I need:
-  json.results[0].lexicalEntries[x].lexicalCategory for the adj/noun etc
-  json.results[0].lexicalEntries[x].entries[0].senses[x].definitions
-  json.results[0].lexicalEntries[0].pronunciations[0].audioFile
-   and then update word subdocument accordingly (perhaps with a subsubdocument?)
-
-  then (later) need to create a 'wordBank' database which includes example sentences and definitions
-  */
+// TODO: Reduce sentence json for relevant sense / handle duplicate word entries
 
 app.listen(port, () => console.log('App listening on port:' + port))

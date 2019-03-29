@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 
 const WordSchema = mongoose.Schema({
     word: String,
-    definition: [String],
+    definition: String,
     lexicalCategory: String,
     sentences: [String],
     mp3: mongoose.SchemaTypes.Url,
