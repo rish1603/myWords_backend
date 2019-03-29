@@ -1,10 +1,6 @@
-var mongoose = require('mongoose');
-var bcrypt = require('bcryptjs');
-
-var WordSchema = mongoose.Schema({
-    word: String,
-    definition: String
-});
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const wordBank = require('./wordBank');
 
 // User Schema
 var UserSchema = mongoose.Schema({
@@ -18,7 +14,7 @@ var UserSchema = mongoose.Schema({
     email: {
         type: String
     },
-    words:[WordSchema]
+    words:[mongoose.Schema.Types.ObjectId]
 });
 
 
