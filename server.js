@@ -169,6 +169,7 @@ app.get('/:userName/:word', function (req, res) {
         }
         else {
           if (userName) {
+
             // resetting and rebuilding endpoint
             options.url = constants.BASE_URL
             options.url = options.url + newWord
@@ -183,16 +184,18 @@ app.get('/:userName/:word', function (req, res) {
                   const word = new Word( {
                     word: newWord,
                     definitions: json.results[0].lexicalEntries[0].entries[0].senses[0].definitions,
-                    lexicalCategory: json.results[0].lexicalEntries[0].lexicalCategory,
+                    lexicalCategory: json.results[0].lexicalEntries[x].lexicalCategory,
                     mp3: json.results[0].lexicalEntries[0].pronunciations[0].audioFile
                   })
+                  console.log(json.results[0].lexicalEntries[0].entries[0].senses[0].definitions)
                 } catch (err) {
                   console.log(err)
                 }
               }
             });
 
-
+            wordExample.save(function (err, word) {
+              if (err) return handleError(err);
 
               User.findOneAndUpdate(
                 { username: userName },
