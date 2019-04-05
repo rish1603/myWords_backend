@@ -6,7 +6,7 @@ const WordSchema = mongoose.Schema({
     definition: String,
     lexicalCategory: String,
     sentences: [String],
-    mp3: mongoose.SchemaTypes.Url,
+    mp3: mongoose.Types.Url,
     frequency: Number
 });
 

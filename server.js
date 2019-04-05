@@ -21,6 +21,9 @@ const bluebird = require("bluebird");
 mongoose.connect('mongodb://localhost/myWords');
 var db = mongoose.connection;
 
+// Declare variable to store user ID
+var userID = ""
+
 // BodyParser Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -88,6 +91,7 @@ passport.use('login',
         User.comparePassword(password, user.password, function (err, isMatch) {
           if (err) throw err;
           if (isMatch) {
+            userID = user.id.toString() // save user ID for this session
             return done(null, user);
           } else {
             return done(null, false, { message: 'Invalid password' });
@@ -141,6 +145,7 @@ app.get('/logout', function (req, res) {
   res.send(null)
 });
 
+// API request options for Oxford API
 const options = {
   url: constants.BASE_URL,
   method: 'GET',
@@ -152,16 +157,26 @@ const options = {
   }
 };
 
+// API request options for Words API
+const freq_options = {
+  url: 'https://wordsapiv1.p.mashape.com/words/',
+  method: 'GET',
+  headers: {
+    'Accept': 'application/json',
+    'X-Mashape-Key': constants.WORDS_API_KEY
+  }
+};
+
 // Get word info from Oxford API and add to list of words
 app.get('/:userName/:word', checkAuth, function (req, res) {
 
-  var word = {
+  var word = new Word({
     word: req.params.word,
     definitions: [String],
     sentences: [String],
     lexicalCategory: String,
     mp3: mongoose.SchemaTypes.Url,
-  }
+  })
 
   // build main request parameters
   options.url = constants.BASE_URL
@@ -172,9 +187,14 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
   const sentencesRequestOptions = options
   sentencesRequestOptions.url += '/sentences'
   const  sentencesRequest = request(sentencesRequestOptions)
+  
+  // build request parameters for separate request to get sentences
+  const frequencyRequestOptions = freq_options
+  frequencyRequestOptions.url += req.params.word
+  const frequencyRequest = request(frequencyRequestOptions)
 
-  bluebird.all([mainRequest, sentencesRequest])
-  .spread(function(mainResponse, sentencesResponse) {
+  bluebird.all([mainRequest, sentencesRequest, frequencyRequest])
+  .spread(function(mainResponse, sentencesResponse, frequencyResponse) {
 
     //get main data
     const json = JSON.parse(mainResponse)
@@ -187,12 +207,30 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
     for (x in sentenceJson.results[0].lexicalEntries[0].sentences) {
       word.sentences.push(sentenceJson.results[0].lexicalEntries[0].sentences[x].text)
     }
+
+    const frequencyJson = JSON.parse(frequencyResponse)
+    word.frequency = frequencyJson.frequency
+
+    word.save(function (err, results) {
+      if (err) {
+        console.log(err)
+      }
+      if (results) {
+        User.findByIdAndUpdate(userID, { $push: { words: results._id } }, function (err, user) {
+          if (err) {
+            console.log(err)
+          }
+          if (user) {
+            console.log(user)
+          }
+        })
+      }
+    })
     return res.status(201).send("word added")
   })
   .catch(function(err) {
     console.log(err)
   })
-
   return res.status(200)
 })
 
