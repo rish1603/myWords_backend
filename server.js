@@ -186,53 +186,80 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
   // build request parameters for separate request to get sentences
   const sentencesRequestOptions = options
   sentencesRequestOptions.url += '/sentences'
-  const  sentencesRequest = request(sentencesRequestOptions)
-  
+  const sentencesRequest = request(sentencesRequestOptions)
+
   // build request parameters for separate request to get sentences
   const frequencyRequestOptions = freq_options
   frequencyRequestOptions.url += req.params.word
   const frequencyRequest = request(frequencyRequestOptions)
 
   bluebird.all([mainRequest, sentencesRequest, frequencyRequest])
-  .spread(function(mainResponse, sentencesResponse, frequencyResponse) {
+    .spread(function (mainResponse, sentencesResponse, frequencyResponse) {
 
-    //get main data
-    const json = JSON.parse(mainResponse)
-    word.definitions = json.results[0].lexicalEntries[0].entries[0].senses[0].definitions
-    word.lexicalCategory = json.results[0].lexicalEntries[0].lexicalCategory
-    word.mp3 = json.results[0].lexicalEntries[0].pronunciations[0].audioFile
+      //get main data
+      const json = JSON.parse(mainResponse)
+      word.definitions = json.results[0].lexicalEntries[0].entries[0].senses[0].definitions
+      word.lexicalCategory = json.results[0].lexicalEntries[0].lexicalCategory
+      word.mp3 = json.results[0].lexicalEntries[0].pronunciations[0].audioFile
 
-    // get sentence data 
-    const sentenceJson = JSON.parse(sentencesResponse)
-    for (x in sentenceJson.results[0].lexicalEntries[0].sentences) {
-      word.sentences.push(sentenceJson.results[0].lexicalEntries[0].sentences[x].text)
-    }
-
-    const frequencyJson = JSON.parse(frequencyResponse)
-    word.frequency = frequencyJson.frequency
-
-    word.save(function (err, results) {
-      if (err) {
-        console.log(err)
+      // get sentence data 
+      const sentenceJson = JSON.parse(sentencesResponse)
+      for (x in sentenceJson.results[0].lexicalEntries[0].sentences) {
+        word.sentences.push(sentenceJson.results[0].lexicalEntries[0].sentences[x].text)
       }
-      if (results) {
-        User.findByIdAndUpdate(userID, { $push: { words: results._id } }, function (err, user) {
-          if (err) {
-            console.log(err)
-          }
-          if (user) {
-            console.log(user)
-          }
-        })
-      }
+
+      const frequencyJson = JSON.parse(frequencyResponse)
+      word.frequency = frequencyJson.frequency
+
+      word.save(function (err, results) {
+        if (err) {
+          console.log(err)
+        }
+        if (results) {
+          User.findOneAndUpdate({ username: req.params.userName },
+            { $push: { words: { wordID: results._id } } },
+            function (err, user) {
+              if (err) {
+                console.log(err)
+              }
+              if (user) {
+                return res.status(201).send("word added")
+              }
+            })
+        }
+      })
     })
-    return res.status(201).send("word added")
-  })
-  .catch(function(err) {
-    console.log(err)
-  })
+    .catch(function (err) {
+      console.log(err)
+    })
   return res.status(200)
 })
+
+app.get('/:userName/myWords/all', checkAuth, function (req, res) {
+
+  User.findOne({ username: req.params.userName }, function (err, user) {
+    if (err) {
+      console.log(err)
+    }
+    if (user) {
+      let wordIdArray = user.words.map(a => a.wordID)
+      Word.find({
+        '_id': { $in: wordIdArray }
+      }, function (err, words) {
+        if (err) {
+          console.log(err)
+        }
+        if (words) {
+          return res.status(200).send(words)
+        }
+      })
+    }
+  })
+})
+
+/* The card object on frontend needs:
+  - All word objects for user
+ */
 
 // TODO: Reduce sentence json for relevant sense / handle duplicate word entries
 

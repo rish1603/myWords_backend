@@ -14,7 +14,11 @@ var UserSchema = mongoose.Schema({
     email: {
         type: String
     },
-    words:[mongoose.Schema.Types.ObjectId]
+    words:[{ 
+        wordID: mongoose.Schema.Types.ObjectId,
+        hint: String,
+        customSentence: String
+    }]
 });
 
 
