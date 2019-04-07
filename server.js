@@ -159,7 +159,7 @@ const options = {
 
 // API request options for Words API
 const freq_options = {
-  url: 'https://wordsapiv1.p.mashape.com/words/',
+  url: constants.WORDS_BASE_URL,
   method: 'GET',
   headers: {
     'Accept': 'application/json',
@@ -172,7 +172,7 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
 
   var word = new Word({
     word: req.params.word,
-    definitions: [String],
+    definition: String,
     sentences: [String],
     lexicalCategory: String,
     mp3: mongoose.SchemaTypes.Url,
@@ -190,6 +190,7 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
 
   // build request parameters for separate request to get sentences
   const frequencyRequestOptions = freq_options
+  frequencyRequestOptions.url = constants.WORDS_BASE_URL
   frequencyRequestOptions.url += req.params.word
   const frequencyRequest = request(frequencyRequestOptions)
 
@@ -198,7 +199,8 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
 
       //get main data
       const json = JSON.parse(mainResponse)
-      word.definitions = json.results[0].lexicalEntries[0].entries[0].senses[0].definitions
+      // console.log(json.results[0].lexicalEntries[0].entries[0].senses[0].definitions[0])
+      word.definition = json.results[0].lexicalEntries[0].entries[0].senses[0].definitions[0]
       word.lexicalCategory = json.results[0].lexicalEntries[0].lexicalCategory
       word.mp3 = json.results[0].lexicalEntries[0].pronunciations[0].audioFile
 

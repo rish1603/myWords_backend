@@ -4,7 +4,6 @@ const jwtSecret = require('./config/jwtConfig')
 module.exports = (req, res, next) => {
     try {
         const token = req.headers.authorization.split(" ")[1];
-        console.log(token)
         const decoded = jwt.verify(token, jwtSecret.secret)
         req.userData = decoded;
         next()
