@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const wordBank = require('./wordBank');
+const mongoValidator = require('mongoose-unique-validator')
 
 // User Schema
 var UserSchema = mongoose.Schema({
@@ -15,12 +15,13 @@ var UserSchema = mongoose.Schema({
         type: String
     },
     words:[{ 
-        wordID: mongoose.Schema.Types.ObjectId,
+        wordID: {type: mongoose.Schema.Types.ObjectId, required: true, unique: true},
         hint: String,
         customSentence: String
     }]
 });
 
+UserSchema.plugin(mongoValidator)
 
 var User = module.exports = mongoose.model('User', UserSchema);
 

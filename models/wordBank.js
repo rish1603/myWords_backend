@@ -1,8 +1,9 @@
 const mongoose = require('mongoose')
-    require('mongoose-type-url');
+require('mongoose-type-url');
+const mongoValidator = require('mongoose-unique-validator')
 
 const WordSchema = mongoose.Schema({
-    word: String,
+    word: {type: String, required: true, unique: true},
     definition: String,
     lexicalCategory: String,
     sentences: [String],
@@ -10,7 +11,10 @@ const WordSchema = mongoose.Schema({
     frequency: Number
 });
 
+WordSchema.plugin(mongoValidator)
+
 var Word = module.exports = mongoose.model('Word', WordSchema)
+
 
 //lexical category
 //definitions

@@ -216,6 +216,16 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
       word.save(function (err, results) {
         if (err) {
           console.log(err)
+          if (err._message == "Word validation failed") {
+            Word.findOne({ word: req.params.word }, function (err, word) {
+              if (err) {
+                console.log(err)
+              }
+              if (word) {
+                handleExistingWord(word._id, req.params.userName, res)
+              }
+            })
+          }
         }
         if (results) {
           User.findOneAndUpdate({ username: req.params.userName },
@@ -236,6 +246,36 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
     })
   return res.status(200)
 })
+
+
+function handleExistingWord(word_id, userName, res) {
+  User.findOne({ username: userName }, function (err, data) {
+    if (err) {
+      console.log(err)
+    }
+    if (data) {
+      for (var value of data.words) {
+        if (value.wordID.equals(word_id)) {
+          console.log("word found")
+          return res.status(200).send("word already exists")
+        }
+        else {
+          User.findOneAndUpdate({ username: userName },
+            { $push: { words: { wordID: word_id } } },
+            function (err, user) {
+              if (err) {
+                console.log(err)
+              }
+              if (user) {
+                return res.status(201).send("word added")
+              }
+            })
+        }
+      }
+    }
+  })
+}
+
 
 app.get('/:userName/myWords/all', checkAuth, function (req, res) {
 
