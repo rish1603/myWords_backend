@@ -297,20 +297,20 @@ app.get('/:userName/myWords/all', checkAuth, function (req, res) {
   })
 })
 
-// Initialise response for quiz endpoint
-var quizResponse = [{
-  word: "",
-  definition: "",
-  sentence: "",
-  rightAnswer: true,
-}]
-
 //get ids for unlearned words
 //get word data for first unlearned word
 //get 4 other words that meet criteria
 //return object to client
 
 app.get('/:userName/myWords/test', checkAuth, function (req, res) {
+
+  // Initialise response for quiz endpoint
+  var quizResponse = [{
+    word: "",
+    definition: "",
+    sentence: "",
+    rightAnswer: true,
+  }]
 
   User.findOne({ username: req.params.userName })
     .then((user) => {
