@@ -224,31 +224,27 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
               if (word) {
                 handleExistingWord(word._id, req.params.userName, res)
               }
-            })
+            }).then(() => {
+              return res.status(200).send()
+            }).catch((err) => console.log(err))
           }
         }
         if (results) {
           User.findOneAndUpdate({ username: req.params.userName },
             { $push: { words: { wordID: results._id } } },
-            function (err, user) {
-              if (err) {
-                console.log(err)
-              }
-              if (user) {
+            ).then(() => {
                 return res.status(201).send("word added")
-              }
-            })
+            }).catch((err) => console.log(err))
         }
       })
     })
     .catch(function (err) {
       console.log(err)
     })
-  return res.status(200)
 })
 
-
 function handleExistingWord(word_id, userName, res) {
+
   User.findOne({ username: userName }, function (err, data) {
     if (err) {
       console.log(err)
@@ -277,24 +273,15 @@ function handleExistingWord(word_id, userName, res) {
 
 app.get('/:userName/myWords/all', checkAuth, function (req, res) {
 
-  User.findOne({ username: req.params.userName }, function (err, user) {
-    if (err) {
-      console.log(err)
-    }
-    if (user) {
-      let wordIdArray = user.words.map(a => a.wordID)
-      Word.find({
-        '_id': { $in: wordIdArray }
-      }, function (err, words) {
-        if (err) {
-          console.log(err)
-        }
-        if (words) {
-          return res.status(200).send(words)
-        }
-      })
-    }
-  })
+  User.findOne({ username: req.params.userName })
+  .then((user) => {
+    return user.words.map(a => a.wordID)
+ }) .then((wordIdArray) => {
+      return Word.find({ '_id': { $in: wordIdArray }})
+ }).then((words) => {
+    return res.status(200).send(words)
+ }).catch((err) => console.log(err))
+
 })
 
 //get ids for unlearned words
@@ -320,7 +307,7 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
     }).then((word) => {
       quizResponse[0].word = word.word
       quizResponse[0].definition = word.definition
-      quizResponse[0].sentence = word.sentences[word.sentences.length - 1]
+      quizResponse[0].sentence = word.sentences[word.sentences.length - 1].replace(word.word, '_____')
       return word
     }).then((word) => {
       return Word.find({ lexicalCategory: word.lexicalCategory, frequency: { $gt: word.frequency } })
@@ -333,7 +320,8 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
           quizResponse.push({
             word: wrongWords[i].word,
             definition: wrongWords[i].definition,
-            sentence: wrongWords[i].sentences[wrongWords[i].sentences.length - 1],
+            sentence: wrongWords[i].sentences[wrongWords[i].sentences.length - 1]
+              .replace(wrongWords[i].word, '_____'),
             rightAnswer: false,
           })
         }
@@ -343,6 +331,27 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
     }).catch(err => {
       console.log(err)
     })
+})
+app.get('/:userName/myWords/test/markLearnt', checkAuth, function (req, res) {
+  User.findOne({ username: req.params.userName })
+    .then((user) => {
+      return unlearnedWords = user.words.filter(i => i.wordIsLearnt == false).map(i => ({ wordID: i.wordID }))
+    }).then((unlearnedWords) => {
+      console.log(unlearnedWords[0])
+      User.findOneAndUpdate({username: req.params.userName}, 
+        { $pull: { words: { wordID: unlearnedWords[0].wordID.toString() } } }, { 'new': true }, function(err, doc) {
+          if(err) {
+            console.log(err)
+          }
+          if(doc) {
+            console.log(doc)
+          }
+        }
+      )
+    }).catch((err) => {
+      console.log(err)
+    })
+    res.status(200).send()
 })
 
 

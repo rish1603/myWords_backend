@@ -14,10 +14,3 @@ const WordSchema = mongoose.Schema({
 WordSchema.plugin(mongoValidator)
 
 var Word = module.exports = mongoose.model('Word', WordSchema)
-
-
-//lexical category
-//definitions
-//sentences (for primary definition)
-//audio file link
-
