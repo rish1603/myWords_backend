@@ -15,9 +15,10 @@ var UserSchema = mongoose.Schema({
         type: String
     },
     words:[{ 
-        wordID: {type: mongoose.Schema.Types.ObjectId, required: true, unique: true},
+        wordID: mongoose.Schema.Types.ObjectId,
         hint: String,
-        customSentence: String
+        customSentence: String,
+        wordIsLearnt: {type: Boolean, default: false}
     }]
 });
 

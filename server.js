@@ -254,28 +254,26 @@ function handleExistingWord(word_id, userName, res) {
       console.log(err)
     }
     if (data) {
-      for (var value of data.words) {
-        if (value.wordID.equals(word_id)) {
-          console.log("word found")
-          return res.status(200).send("word already exists")
-        }
-        else {
-          User.findOneAndUpdate({ username: userName },
-            { $push: { words: { wordID: word_id } } },
-            function (err, user) {
-              if (err) {
-                console.log(err)
-              }
-              if (user) {
-                return res.status(201).send("word added")
-              }
-            })
-        }
+      if (data.words.some(function (i) {
+        return i.wordID.equals(word_id) //returns true if user already has word
+      })) {
+        return res.status(200).send("word already exists")
+      }
+      else {
+        User.findOneAndUpdate({ username: userName },
+          { $push: { words: { wordID: word_id } } },
+          function (err, user) {
+            if (err) {
+              console.log(err)
+            }
+            if (user) {
+              return res.status(201).send("word added")
+            }
+          })
       }
     }
   })
 }
-
 
 app.get('/:userName/myWords/all', checkAuth, function (req, res) {
 
@@ -299,8 +297,62 @@ app.get('/:userName/myWords/all', checkAuth, function (req, res) {
   })
 })
 
-/* The card object on frontend needs:
-  - All word objects for user
+// Initialise response for quiz endpoint
+var quizResponse = [{
+  word: "",
+  definition: "",
+  sentence: "",
+  rightAnswer: true,
+}]
+
+//get ids for unlearned words
+//get word data for first unlearned word
+//get 4 other words that meet criteria
+//return object to client
+
+app.get('/:userName/myWords/test', checkAuth, function (req, res) {
+
+  User.findOne({ username: req.params.userName })
+    .then((user) => {
+      return unlearnedWords = user.words.filter(i => i.wordIsLearnt == false).map(i => ({ wordID: i.wordID }))
+    }).then((unlearnedWords) => {
+      return Word.findById(unlearnedWords[0].wordID)
+    }).then((word) => {
+      quizResponse[0].word = word.word
+      quizResponse[0].definition = word.definition
+      quizResponse[0].sentence = word.sentences[word.sentences.length - 1]
+      return word
+    }).then((word) => {
+      return Word.find({ lexicalCategory: word.lexicalCategory, frequency: { $gt: word.frequency } })
+    }).then((wrongWords) => {
+      for (let i = 0; i < 4; i++) {
+        if (!wrongWords[i]) {
+          break
+        }
+        else {
+          quizResponse.push({
+            word: wrongWords[i].word,
+            definition: wrongWords[i].definition,
+            sentence: wrongWords[i].sentences[wrongWords[i].sentences.length - 1],
+            rightAnswer: false,
+          })
+        }
+      }
+    }).then(() => {
+      return res.status(200).send(quizResponse)
+    }).catch(err => {
+      console.log(err)
+    })
+})
+
+
+/* 
+  I want to return:
+    - right answer (word, definition, example sentence, rightAnswer = true)
+    - wrong answer (word, definition, example sentence, rightAnswer = false)
+    - wrong answer (word, definition, example sentence, rightAnswer = false)
+    - wrong answer (word, definition, example sentence, rightAnswer = false)
+    - wrong answer (word, definition, example sentence, rightAnswer = false)
  */
 
 // TODO: Reduce sentence json for relevant sense / handle duplicate word entries
