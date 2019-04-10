@@ -204,6 +204,8 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
       word.definition = json.results[0].lexicalEntries[0].entries[0].senses[0].definitions[0]
       word.lexicalCategory = json.results[0].lexicalEntries[0].lexicalCategory
       word.mp3 = json.results[0].lexicalEntries[0].pronunciations[0].audioFile
+      word.sentences.splice(1, 1, json.results[0].lexicalEntries[0].entries[0].senses[0].examples[0].text
+)
 
       // get sentence data 
       const sentenceJson = JSON.parse(sentencesResponse)
@@ -304,7 +306,7 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
       quizResponse[0].sentence = word.sentences[1].replace(word.word, '_____')
       return word
     }).then((word) => {
-      return shuffle(Word.find({ lexicalCategory: word.lexicalCategory, frequency: { $gt: word.frequency }}))
+      return Word.find({ lexicalCategory: word.lexicalCategory, frequency: { $gt: word.frequency } })
     }).then((wrongWords) => {
       for (let i = 0; i < 4; i++) {
         if (!wrongWords[i]) {
