@@ -318,7 +318,7 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
           quizResponse.push({
             word: wrongWords[i].word,
             definition: wrongWords[i].definition,
-            sentence: wrongWords[i].sentences[1] .replaceAll(wrongWords[i].word, '_____'),
+            sentence: wrongWords[i].sentences[1].replaceAll(wrongWords[i].word, '_____'),
             rightAnswer: false,
           })
         }
@@ -334,7 +334,6 @@ app.get('/:userName/myWords/test/markLearnt', checkAuth, function (req, res) {
     .then((user) => {
       return unlearnedWords = user.words.filter(i => i.wordIsLearnt == false).map(i => ({ wordID: i.wordID }))
     }).then((unlearnedWords) => {
-      console.log(unlearnedWords[0])
       User.findOneAndUpdate({username: req.params.userName}, 
         { $pull: { words: { wordID: unlearnedWords[0].wordID.toString() } } }, { 'new': true }, function(err, doc) {
           if(err) {
