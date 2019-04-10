@@ -16,6 +16,7 @@ const jwt = require('jsonwebtoken')
 const checkAuth = require('./check-auth')
 const constants = require('./constants');
 const bluebird = require("bluebird");
+const shuffle = require("array-shuffle")
 
 // Conenct to DB
 mongoose.connect('mongodb://localhost/myWords');
@@ -303,7 +304,7 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
       quizResponse[0].sentence = word.sentences[1].replace(word.word, '_____')
       return word
     }).then((word) => {
-      return Word.find({ lexicalCategory: word.lexicalCategory, frequency: { $gt: word.frequency } })
+      return shuffle(Word.find({ lexicalCategory: word.lexicalCategory, frequency: { $gt: word.frequency }}))
     }).then((wrongWords) => {
       for (let i = 0; i < 4; i++) {
         if (!wrongWords[i]) {
@@ -313,7 +314,7 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
           quizResponse.push({
             word: wrongWords[i].word,
             definition: wrongWords[i].definition,
-            sentence: wrongWords[i].sentences[wrongWords[i].sentences.length - 1]
+            sentence: wrongWords[i].sentences[1]
               .replace(wrongWords[i].word, '_____'),
             rightAnswer: false,
           })
