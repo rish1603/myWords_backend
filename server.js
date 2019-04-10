@@ -300,7 +300,7 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
     }).then((word) => {
       quizResponse[0].word = word.word
       quizResponse[0].definition = word.definition
-      quizResponse[0].sentence = word.sentences[0].replace(word.word, '_____')
+      quizResponse[0].sentence = word.sentences[1].replace(word.word, '_____')
       return word
     }).then((word) => {
       return Word.find({ lexicalCategory: word.lexicalCategory, frequency: { $gt: word.frequency } })
