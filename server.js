@@ -318,8 +318,7 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
           quizResponse.push({
             word: wrongWords[i].word,
             definition: wrongWords[i].definition,
-            sentence: wrongWords[i].sentences[1]
-              .replace(wrongWords[i].word, '_____'),
+            sentence: wrongWords[i].sentences[1] .replaceAll(wrongWords[i].word, '_____'),
             rightAnswer: false,
           })
         }
@@ -351,6 +350,12 @@ app.get('/:userName/myWords/test/markLearnt', checkAuth, function (req, res) {
     })
     res.status(200).send()
 })
+
+String.prototype.replaceAll = function(strReplace, strWith) {
+    var esc = strReplace.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    var reg = new RegExp(esc, 'ig');
+    return this.replace(reg, strWith);
+};
 
 // TODO: Reduce sentence json for relevant sense / handle duplicate word entries
 
