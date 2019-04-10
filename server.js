@@ -282,11 +282,6 @@ app.get('/:userName/myWords/all', checkAuth, function (req, res) {
 
 })
 
-//get ids for unlearned words
-//get word data for first unlearned word
-//get 4 other words that meet criteria
-//return object to client
-
 app.get('/:userName/myWords/test', checkAuth, function (req, res) {
 
   // Initialise response for quiz endpoint
@@ -305,7 +300,7 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
     }).then((word) => {
       quizResponse[0].word = word.word
       quizResponse[0].definition = word.definition
-      quizResponse[0].sentence = word.sentences[word.sentences.length - 1].replace(word.word, '_____')
+      quizResponse[0].sentence = word.sentences[0].replace(word.word, '_____')
       return word
     }).then((word) => {
       return Word.find({ lexicalCategory: word.lexicalCategory, frequency: { $gt: word.frequency } })
@@ -351,16 +346,6 @@ app.get('/:userName/myWords/test/markLearnt', checkAuth, function (req, res) {
     })
     res.status(200).send()
 })
-
-
-/* 
-  I want to return:
-    - right answer (word, definition, example sentence, rightAnswer = true)
-    - wrong answer (word, definition, example sentence, rightAnswer = false)
-    - wrong answer (word, definition, example sentence, rightAnswer = false)
-    - wrong answer (word, definition, example sentence, rightAnswer = false)
-    - wrong answer (word, definition, example sentence, rightAnswer = false)
- */
 
 // TODO: Reduce sentence json for relevant sense / handle duplicate word entries
 
