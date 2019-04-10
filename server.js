@@ -224,8 +224,6 @@ app.get('/:userName/:word', checkAuth, function (req, res) {
               if (word) {
                 handleExistingWord(word._id, req.params.userName, res)
               }
-            }).then(() => {
-              return res.status(200).send()
             }).catch((err) => console.log(err))
           }
         }
