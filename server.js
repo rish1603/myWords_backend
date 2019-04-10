@@ -308,6 +308,8 @@ app.get('/:userName/myWords/test', checkAuth, function (req, res) {
     }).then((word) => {
       return Word.find({ lexicalCategory: word.lexicalCategory, frequency: { $gt: word.frequency } })
     }).then((wrongWords) => {
+      return shuffle(wrongWords)
+    }) .then((wrongWords) => {
       for (let i = 0; i < 4; i++) {
         if (!wrongWords[i]) {
           break
